@@ -1,11 +1,13 @@
 package kvstore;
 
+import java.util.LinkedList;
+
 
 public class ThreadPool {
 
     /* Array of threads in the threadpool */
     public Thread threads[];
-
+    private LinkedList<Runnable> jobQueue;
 
     /**
      * Constructs a Threadpool with a certain number of threads.
@@ -14,8 +16,12 @@ public class ThreadPool {
      */
     public ThreadPool(int size) {
         threads = new Thread[size];
-
+        jobQueue = new LinkedList<Runnable>();
         // implement me
+        for(int i = 0; i < size; i++){
+        		threads[i] = new WorkerThread(this);
+        		threads[i].start();
+        }
     }
 
     /**
@@ -24,22 +30,26 @@ public class ThreadPool {
      * if one exists and start processing it.
      *
      * @param r job that has to be executed
-     * @throws InterruptedException if thread is interrupted while in blocked
-     *         state. Your implementation may or may not actually throw this.
+     * 
      */
-    public void addJob(Runnable r) throws InterruptedException {
+    public synchronized void addJob(Runnable r){
         // implement me
+    		jobQueue.addLast(r);
+    		this.notify();
     }
 
     /**
      * Block until a job is present in the queue and retrieve the job
      * @return A runnable task that has to be executed
      * @throws InterruptedException if thread is interrupted while in blocked
-     *         state. Your implementation may or may not actually throw this.
+     * state. Your implementation may or may not actually throw this.
      */
-    public Runnable getJob() throws InterruptedException {
+    public synchronized Runnable getJob() throws InterruptedException {
         // implement me
-        return null;
+    		if(0 == jobQueue.size())
+    			this.wait();
+	
+        return jobQueue.removeFirst();
     }
 
     /**
@@ -64,6 +74,13 @@ public class ThreadPool {
         @Override
         public void run() {
             // implement me
+        		while(true){
+        			try {
+						threadPool.getJob().run();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+        		}
         }
     }
 }

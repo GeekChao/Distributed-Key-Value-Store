@@ -36,6 +36,8 @@ public class ServerClientHandler implements NetworkHandler {
      */
     public ServerClientHandler(KVServer kvServer, int connections) {
         // implement me
+    		this.kvServer = kvServer;
+    		threadPool = new ThreadPool(connections);
     }
 
     /**
@@ -47,8 +49,65 @@ public class ServerClientHandler implements NetworkHandler {
     @Override
     public void handle(Socket client) {
         // implement me
+    		threadPool.addJob(new ClientHandler(client));
     }
     
-    // implement me
+    /**
+     * Runnable class containing routine to service a request from the client.
+     */
+    private class ClientHandler implements Runnable {
 
+        private Socket client;
+
+        /**
+         * Construct a ClientHandler.
+         *
+         * @param client Socket connected to client with the request
+         */
+        public ClientHandler(Socket client) {
+            this.client = client;
+        }
+
+        /**
+         * Processes request from client and sends back a response with the
+         * result. The delivery of the response is best-effort. If we are
+         * unable to return any response, there is nothing else we can do.
+         */
+        @Override
+        public void run() {
+            // implement me
+        		KVMessage response = null;			
+			KVMessage msg;
+			
+			try {
+				msg = new KVMessage(client);
+				switch (msg.getMsgType()) {
+				case PUT_REQ:
+	                response = new KVMessage(RESP, SUCCESS);
+	                kvServer.put(msg.getKey(), msg.getValue());
+	                break;
+	            case DEL_REQ:
+	                response = new KVMessage(RESP, SUCCESS);
+	                kvServer.del(msg.getKey());
+	                break;
+	            case GET_REQ:
+	                response = new KVMessage(RESP);
+	                response.setValue(kvServer.get(msg.getKey()));
+	                response.setKey(msg.getKey());
+	                break;
+	            default:
+	            		break;
+				}
+			} catch (KVException kve) {
+				response = kve.getKVMessage();
+			}	
+			
+			try {
+				response.sendMessage(client);
+			} catch (KVException kve) {
+				kve.printStackTrace();
+			}
+		}
+    }
+   
 }
