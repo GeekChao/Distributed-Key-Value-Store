@@ -4,6 +4,7 @@ import static kvstore.KVConstants.*;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 
 import javax.xml.bind.JAXBContext;
@@ -79,7 +80,29 @@ public class KVMessage implements Serializable {
      *         KVConstants.java for possible KVException messages.
      */
     public KVMessage(Socket sock, int timeout) throws KVException {
-        // implement me
+        // implement message
+    		try {
+				sock.setSoTimeout(timeout);
+			} catch (SocketException e) {
+				throw new KVException(ERROR_SOCKET_TIMEOUT);
+			}
+    		
+    		KVMessageType kvmt = null;
+    		try {
+				kvmt = unmarshal(sock.getInputStream());
+			} catch (JAXBException e) {
+				throw new KVException(ERROR_PARSER);
+			} catch (IOException e) {
+				throw new KVException(ERROR_COULD_NOT_RECEIVE_DATA);
+			}
+    		
+    		if(null != kvmt){
+    			key = kvmt.getKey();
+    			message = kvmt.getMessage();
+    			msgType = kvmt.getType();
+    			value = kvmt.getValue();
+    		}
+    			
     }
 
     /**
@@ -89,10 +112,12 @@ public class KVMessage implements Serializable {
      */
     public KVMessage(KVMessage kvm) {
         // implement me
+    		key = kvm.getKey();
+    		message = kvm.getMessage();
+    		msgType = kvm.getMsgType();
+    		value = kvm.getValue();
     }
-
     
-
     /**
      * Validates and creates the KVMessageType XML root element for this KVMessage
      *
@@ -103,6 +128,10 @@ public class KVMessage implements Serializable {
         ObjectFactory factory = new ObjectFactory();
         KVMessageType xmlStore = factory.createKVMessageType();
         //implement me
+        xmlStore.setKey(key);
+        xmlStore.setMessage(message);
+        xmlStore.setType(msgType);
+        xmlStore.setValue(value);
         return factory.createKVMessage(xmlStore);
     }
 
@@ -168,7 +197,17 @@ public class KVMessage implements Serializable {
      *         ERROR_COULD_NOT_SEND_DATA
      */
     public void sendMessage(Socket sock) throws KVException {
-        // implement me
+        // implement message
+    		OutputStream os = null;
+    		try {
+				os = sock.getOutputStream();
+				String str = toXML();
+				os.write(str.getBytes());
+		    		os.flush();
+		    		sock.shutdownOutput();
+			} catch (IOException e) {
+				throw new KVException(ERROR_COULD_NOT_SEND_DATA);
+			}
     }
 
     public String getKey() {
