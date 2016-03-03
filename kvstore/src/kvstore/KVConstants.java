@@ -8,6 +8,8 @@ public class KVConstants {
     public static final String DEL_REQ  = "delreq";
     public static final String RESP     = "resp";
     public static final String SUCCESS  = "Success";
+    public static final String TRUE = "True";
+    public static final String FALSE = "False";
 
     // proj4-specific constants
     public static final String READY    = "ready";

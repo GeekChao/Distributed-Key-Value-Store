@@ -2,6 +2,7 @@ package kvstore;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.xml.bind.JAXBContext;
@@ -23,6 +24,10 @@ import kvstore.xml.ObjectFactory;
  */
 public class KVCache implements KeyValueInterface {
 
+	private KVSetType[] cache;
+	private Lock[] locks;
+	private int maxElemsPerSet;
+	private int numSets;
     /**
      * Constructs a second-chance-replacement cache.
      *
@@ -32,6 +37,15 @@ public class KVCache implements KeyValueInterface {
     @SuppressWarnings("unchecked")
     public KVCache(int numSets, int maxElemsPerSet) {
         // implement me
+		this.maxElemsPerSet = maxElemsPerSet;
+		this.numSets = numSets;
+    		cache = new KVSetType[numSets];
+    		locks = new Lock[numSets];
+    		for(int i = 0; i < numSets; i++){
+    			cache[i] = new KVSetType();
+    			cache[i].setId(new Integer(i).toString());
+    			locks[i] = new ReentrantLock();
+    		}
     }
 
     /**
@@ -46,6 +60,13 @@ public class KVCache implements KeyValueInterface {
     @Override
     public String get(String key) {
         // implement me
+		int setID = Math.abs(key.hashCode()) % numSets;
+		for(KVCacheEntry temp : cache[setID].getCacheEntry()){
+			if(temp.getKey().equals(key)){
+				temp.setIsReferenced(KVConstants.TRUE);
+				return temp.getValue();
+			}
+		}
         return null;
     }
 
@@ -68,6 +89,36 @@ public class KVCache implements KeyValueInterface {
     @Override
     public void put(String key, String value) {
         // implement me
+    		//an entry with the specified key already exists in the cache
+		int setID = Math.abs(key.hashCode()) % numSets;
+		List<KVCacheEntry> set = cache[setID].getCacheEntry();
+		for(KVCacheEntry temp : set){
+			if(temp.getKey().equals(key)){
+				temp.setValue(value);
+				temp.setIsReferenced(KVConstants.TRUE);
+				return;
+			}
+		}
+    		//not found
+		KVCacheEntry entry = new KVCacheEntry();
+		entry.setIsReferenced(KVConstants.FALSE);
+		entry.setKey(key);
+		entry.setValue(value);
+    		if(set.size() < maxElemsPerSet){
+    			set.add(entry);
+    		}else{
+    			while(true){
+    				for(KVCacheEntry temp : set){
+    					if(temp.getIsReferenced().equals(KVConstants.TRUE)){
+    						temp.setIsReferenced(KVConstants.FALSE);
+    					}else{
+    						set.remove(temp);
+    						set.add(temp);
+    						return;
+    					}
+    				}
+    			}
+    		}
     }
 
     /**
@@ -80,6 +131,13 @@ public class KVCache implements KeyValueInterface {
     @Override
     public void del(String key) {
         // implement me
+		int setID = Math.abs(key.hashCode()) % numSets;
+		for(KVCacheEntry temp : cache[setID].getCacheEntry()){
+			if(temp.getKey().equals(key)){
+				temp.setIsReferenced(KVConstants.FALSE);
+				cache[setID].getCacheEntry().remove(temp);
+			}		
+		}
     }
 
     /**
@@ -92,9 +150,9 @@ public class KVCache implements KeyValueInterface {
      */
 
     public Lock getLock(String key) {
-    	return null;
     	//implement me
-
+    		int setID = Math.abs(key.hashCode()) % numSets;
+    		return locks[setID];
     }
     
     /**
@@ -104,7 +162,7 @@ public class KVCache implements KeyValueInterface {
      */
     int getCacheSetSize(int cacheSet) {
         // implement me
-        return -1;
+        return cache[cacheSet].getCacheEntry().size();
     }
 
     private void marshalTo(OutputStream os) throws JAXBException {
@@ -119,7 +177,9 @@ public class KVCache implements KeyValueInterface {
     private JAXBElement<KVCacheType> getXMLRoot() throws JAXBException {
         ObjectFactory factory = new ObjectFactory();
         KVCacheType xmlCache = factory.createKVCacheType();
-            // implement me
+        // implement me
+        for(KVSetType set : cache)
+        		xmlCache.getSet().add(set);
         return factory.createKVCache(xmlCache);
     }
 
@@ -127,7 +187,6 @@ public class KVCache implements KeyValueInterface {
      * Serialize this store to XML. See spec for details on output format.
      */
     public String toXML() {
-        // implement me
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         try {
             marshalTo(os);
