@@ -46,7 +46,7 @@ public class ThreadPool {
      */
     public synchronized Runnable getJob() throws InterruptedException {
         // implement me
-    		if(0 == jobQueue.size())
+    		while(0 == jobQueue.size())
     			this.wait();
 	
         return jobQueue.removeFirst();
