@@ -113,7 +113,7 @@ public class KVCache implements KeyValueInterface {
     						temp.setIsReferenced(KVConstants.FALSE);
     					}else{
     						set.remove(temp);
-    						set.add(temp);
+    						set.add(entry);
     						return;
     					}
     				}
@@ -134,8 +134,8 @@ public class KVCache implements KeyValueInterface {
 		int setID = Math.abs(key.hashCode()) % numSets;
 		for(KVCacheEntry temp : cache[setID].getCacheEntry()){
 			if(temp.getKey().equals(key)){
-				temp.setIsReferenced(KVConstants.FALSE);
 				cache[setID].getCacheEntry().remove(temp);
+				return;
 			}		
 		}
     }
