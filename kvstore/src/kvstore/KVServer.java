@@ -6,6 +6,8 @@ import static kvstore.KVConstants.RESP;
 
 import java.util.concurrent.locks.Lock;
 
+import org.mockito.asm.tree.analysis.Value;
+
 /**
  * This class services all storage logic for an individual key-value server.
  * All KVServer request on keys from different sets must be parallel while
@@ -42,6 +44,11 @@ public class KVServer implements KeyValueInterface {
     @Override
     public void put(String key, String value) throws KVException {
         // implement me
+    		Lock lock = dataCache.getLock(key);
+    		lock.lock();
+		dataCache.put(key, value);
+		lock.unlock();
+    		dataStore.put(key, value);
     }
 
     /**
@@ -55,6 +62,18 @@ public class KVServer implements KeyValueInterface {
     @Override
     public String get(String key) throws KVException {
         // implement me
+
+    		if(null != dataCache.get(key)){
+    			return dataCache.get(key);
+    		}
+    		else{
+    			String value = dataStore.get(key);
+    			if(null != value){
+    				dataCache.put(key, value);
+    				return value;
+    			}
+    		}
+    		
         return null;
     }
 
@@ -67,6 +86,7 @@ public class KVServer implements KeyValueInterface {
     @Override
     public void del(String key) throws KVException {
         // implement me
+    	
     }
 
     /**
