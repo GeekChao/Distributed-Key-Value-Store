@@ -44,12 +44,26 @@ public class KVServer implements KeyValueInterface {
     @Override
     public void put(String key, String value) throws KVException {
         // implement me
+    		if(key.length() > MAX_KEY_SIZE){
+    			KVMessage kvm = new KVMessage(RESP, ERROR_OVERSIZED_KEY);
+    			throw new KVException(kvm);
+    		}
+    		
+    		if(value.length() > MAX_VAL_SIZE){
+    			KVMessage kvm = new KVMessage(RESP, ERROR_OVERSIZED_VALUE);
+    			throw new KVException(kvm);
+    		}
+    		
     		Lock lock = dataCache.getLock(key);
-    		lock.lock();
-		dataCache.put(key, value);
-		lock.unlock();
-    		dataStore.put(key, value);
-    }
+    		try {
+	    			lock.lock();
+	    			//write through
+	    			dataCache.put(key, value);
+	    			dataStore.put(key, value);
+			} finally{
+    				lock.unlock();
+			}  		
+    	}
 
     /**
      * Performs get request.
@@ -62,19 +76,31 @@ public class KVServer implements KeyValueInterface {
     @Override
     public String get(String key) throws KVException {
         // implement me
-
-    		if(null != dataCache.get(key)){
-    			return dataCache.get(key);
-    		}
-    		else{
-    			String value = dataStore.get(key);
-    			if(null != value){
-    				dataCache.put(key, value);
-    				return value;
-    			}
-    		}
+		if(key.length() > MAX_KEY_SIZE){
+			KVMessage kvm = new KVMessage(RESP, ERROR_OVERSIZED_KEY);
+			throw new KVException(kvm);
+		}
+		
+    		Lock lock = dataCache.getLock(key);
+    		String value = null;
+    		try {
+				lock.lock();
+				value = dataCache.get(key);
+				if(null != value){
+	    				return value;
+		    		}
+		    		else{
+		    			value = dataStore.get(key);
+		    			if(null != value){
+		    				dataCache.put(key, value);
+		    				return value;
+		    			}
+		    		} 	
+			} finally{
+				lock.unlock();
+			}
     		
-        return null;
+        return value;
     }
 
     /**
@@ -86,7 +112,19 @@ public class KVServer implements KeyValueInterface {
     @Override
     public void del(String key) throws KVException {
         // implement me
-    	
+		if(key.length() > MAX_KEY_SIZE){
+			KVMessage kvm = new KVMessage(RESP, ERROR_OVERSIZED_KEY);
+			throw new KVException(kvm);
+		}
+		
+    		Lock lock = dataCache.getLock(key);
+    		try {    		
+	    			lock.lock();
+	    			dataCache.del(key);	
+	        		dataStore.del(key);
+			} finally{
+	    			lock.unlock();
+			}
     }
 
     /**
@@ -99,7 +137,12 @@ public class KVServer implements KeyValueInterface {
      */
     public boolean hasKey(String key) {
         // implement me
-        return false;
+    		try {
+    			  dataStore.get(key);
+    			  return true;
+			} catch (KVException kve) {
+				return false;
+			}
     }
 
     /** This method is purely for convenience and will not be tested. */
