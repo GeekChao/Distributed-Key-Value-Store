@@ -135,7 +135,7 @@ public class KVCache implements KeyValueInterface {
 		for(KVCacheEntry temp : cache[setID].getCacheEntry()){
 			if(temp.getKey().equals(key)){
 				cache[setID].getCacheEntry().remove(temp);
-				return;
+				return; //delete one element and then exit
 			}		
 		}
     }
