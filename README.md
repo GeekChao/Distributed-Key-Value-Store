@@ -6,4 +6,4 @@
     network through sockets (SocketServer andServerClientHandler). The KVServer uses a ThreadPool to support 
     concurrent operations across multiple sets in a set-associative KVCache, which is backed by a KVStore.
     
-    ![alt tag](https://github.com/GeekChao/Operating-System/blob/master/kvstore/resources/pictures/kvstore.png)
+![alt tag](https://github.com/GeekChao/Operating-System/blob/master/kvstore/resources/pictures/kvstore.png)
