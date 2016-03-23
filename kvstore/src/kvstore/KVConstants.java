@@ -17,6 +17,9 @@ public class KVConstants {
     public static final String ABORT    = "abort";
     public static final String COMMIT   = "commit";
     public static final String ACK      = "ack";
+    
+    //the name of output file
+    public static String FILENAME = "./xml/result.xml";
 
     /**
      * Error message used if an IOException arises while parsing the

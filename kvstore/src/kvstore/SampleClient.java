@@ -22,12 +22,11 @@ public class SampleClient {
 	        System.out.println(curThread.getName() + "get(\"foo\")");
 	        String value = client.get("foo");
 	        System.out.println(curThread.getName() + "Get returned \"" + value + "\"");
-	        Thread.sleep(ThreadLocalRandom.current().nextInt(1000));
+	        Thread.sleep(ThreadLocalRandom.current().nextInt(10000));
 
 	        System.out.println(curThread.getName() + "del(\"foo\")");
 	        client.del("foo");
 	        System.out.println(curThread.getName() + "del success!");
-	        Thread.sleep(ThreadLocalRandom.current().nextInt(10000));
 
 		}
         catch (KVException kve) {

@@ -101,7 +101,7 @@ public class KVStore implements KeyValueInterface {
         Marshaller marshaller = context.createMarshaller();
         marshaller.setProperty("com.sun.xml.internal.bind.xmlHeaders", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         marshaller.setProperty(Marshaller.JAXB_FRAGMENT, true);
-        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, false);
+        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
         marshaller.marshal(getXMLRoot(), os);
     }
     
@@ -157,6 +157,7 @@ public class KVStore implements KeyValueInterface {
      * @param fileName the file containing the serialized store data
      */
     public void restoreFromFile(String fileName) {
+    		System.out.println("Restore the contents of the store with the contents of a file in the disk");
         resetStore();
         // implement me
 		try {

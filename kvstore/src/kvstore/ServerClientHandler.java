@@ -38,6 +38,29 @@ public class ServerClientHandler implements NetworkHandler {
         // implement me
     		this.kvServer = kvServer;
     		threadPool = new ThreadPool(connections);
+    		kvServer.getDataStore().restoreFromFile(KVConstants.FILENAME);
+    		writeBackDisk();
+    }
+    
+    /**
+     * Write key-value stores in the memory to disk every 15 seconds.
+     */
+    private void writeBackDisk(){
+    		new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					try {
+						while(true){
+							Thread.sleep(15000);
+							kvServer.getDataStore().dumpToFile(KVConstants.FILENAME);
+							System.out.println("Write key-value stores in the memory to disk every 15 seconds.");
+						}
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}).start();
     }
 
     /**

@@ -151,4 +151,8 @@ public class KVServer implements KeyValueInterface {
         return dataStore.toString() + dataCache.toString();
     }
 
+    /** Return a instance of kvstore*/
+    public KVStore getDataStore(){
+    		return dataStore;
+    }
 }
