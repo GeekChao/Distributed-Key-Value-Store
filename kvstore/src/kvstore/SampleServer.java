@@ -7,7 +7,7 @@ public class SampleServer {
     public static void main(String[] args) {
         try {
             String hostname = InetAddress.getLocalHost().getHostAddress();
-            SocketServer ss = new SocketServer(hostname, 8080);
+            SocketServer ss = new SocketServer(hostname, 9999);
             ss.addHandler(new ServerClientHandler(new KVServer(100, 10)));
             ss.connect();
             System.out.println("Server listening for clients at " + ss.getHostname());
