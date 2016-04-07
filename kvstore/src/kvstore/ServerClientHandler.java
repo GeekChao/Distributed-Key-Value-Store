@@ -103,6 +103,7 @@ public class ServerClientHandler implements NetworkHandler {
 			KVMessage msg;
 			
 			try {
+				// retrieve message from client xml request
 				msg = new KVMessage(client);
 				switch (msg.getMsgType()) {
 				case PUT_REQ:
@@ -122,10 +123,12 @@ public class ServerClientHandler implements NetworkHandler {
 	            		break;
 				}
 			} catch (KVException kve) {
+				//send error message to clients
 				response = kve.getKVMessage();
 			}	
 			
 			try {
+				//send regular response message to clients
 				response.sendMessage(client);
 			} catch (KVException kve) {
 				kve.printStackTrace();

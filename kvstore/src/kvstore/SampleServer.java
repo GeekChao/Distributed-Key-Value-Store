@@ -12,7 +12,8 @@ public class SampleServer {
         try {
             String hostname = InetAddress.getLocalHost().getHostAddress();
             SocketServer ss = new SocketServer(hostname, 9999);
-            ss.addHandler(new ServerClientHandler(new KVServer(100, 3)));
+            //In Cache, there are 100 sets and 10 elements per each set; and three threads run in the background.
+            ss.addHandler(new ServerClientHandler(new KVServer(100, 10), 3));
             ss.connect();
             System.out.println("Server listening for clients at " + ss.getHostname());
             ss.start();

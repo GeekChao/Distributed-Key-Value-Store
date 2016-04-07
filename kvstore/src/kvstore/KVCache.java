@@ -37,9 +37,11 @@ public class KVCache implements KeyValueInterface {
     @SuppressWarnings("unchecked")
     public KVCache(int numSets, int maxElemsPerSet) {
         // implement me
+    		//set the number of sets, elements per each set
 		this.maxElemsPerSet = maxElemsPerSet;
 		this.numSets = numSets;
     		cache = new KVSetType[numSets];
+    		//initialize cache and assign a lock to each set
     		locks = new Lock[numSets];
     		for(int i = 0; i < numSets; i++){
     			cache[i] = new KVSetType();
@@ -89,7 +91,7 @@ public class KVCache implements KeyValueInterface {
     @Override
     public void put(String key, String value) {
         // implement me
-    		//an entry with the specified key already exists in the cache
+    		//One case: an entry with the specified key already exists in the cache
 		int setID = Math.abs(key.hashCode()) % numSets;
 		List<KVCacheEntry> set = cache[setID].getCacheEntry();
 		for(KVCacheEntry temp : set){
@@ -99,19 +101,23 @@ public class KVCache implements KeyValueInterface {
 				return;
 			}
 		}
-    		//not found
+    		//Two case: not exists
+		//create a instance of KVCacheEntry
 		KVCacheEntry entry = new KVCacheEntry();
 		entry.setIsReferenced(KVConstants.FALSE);
 		entry.setKey(key);
 		entry.setValue(value);
+		//if the cache is not full, just add the instance
     		if(set.size() < maxElemsPerSet){
     			set.add(entry);
     		}else{
+    			//if the cache is full, use a second-chance-replacement policy
     			while(true){
     				for(KVCacheEntry temp : set){
     					if(temp.getIsReferenced().equals(KVConstants.TRUE)){
     						temp.setIsReferenced(KVConstants.FALSE);
     					}else{
+    						//remove the first entry with 'FALSE' reference
     						set.remove(temp);
     						set.add(entry);
     						return;

@@ -88,7 +88,7 @@ public class KVClient implements KeyValueInterface {
     				outMsg.sendMessage(sock);
     				//receive
     				KVMessage inMsg = new KVMessage(sock);
-    				
+    				//if fail, throws a exception
     				if(!inMsg.getMessage().equals(SUCCESS)) throw new KVException(inMsg.getMessage());
     				
 			} catch (KVException kve) {
@@ -121,7 +121,7 @@ public class KVClient implements KeyValueInterface {
 				outMsg.sendMessage(sock);
 				//receive
 				inMsg = new KVMessage(sock);
-				
+				//if fail, throws a exception
 				if(null == inMsg.getKey() || null == inMsg.getValue())
 					throw new KVException(inMsg.getMessage());
 								
@@ -156,7 +156,7 @@ public class KVClient implements KeyValueInterface {
 				outMsg.sendMessage(sock);
 				//receive
 				KVMessage inMsg = new KVMessage(sock);
-				
+				//if fail, throws a exception
 				if(!inMsg.getMessage().equals(SUCCESS)) throw new KVException(inMsg.getMessage());
 				
 		} catch (KVException kve) {

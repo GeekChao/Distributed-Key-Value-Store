@@ -57,7 +57,7 @@ public class KVServer implements KeyValueInterface {
     		Lock lock = dataCache.getLock(key);
     		try {
 	    			lock.lock();
-	    			//write through
+	    			//write through: modify the states of both cache and store
 	    			dataCache.put(key, value);
 	    			dataStore.put(key, value);
 			} finally{
@@ -85,13 +85,16 @@ public class KVServer implements KeyValueInterface {
     		String value = null;
     		try {
 				lock.lock();
+				// key-value exists in the cache, just return the value
 				value = dataCache.get(key);
 				if(null != value){
 	    				return value;
 		    		}
 		    		else{
+		    		// key-value not exists in the cache, and then check that in store
 		    			value = dataStore.get(key);
 		    			if(null != value){
+		    				//if key-value exists in store, write it to the cache
 		    				dataCache.put(key, value);
 		    				return value;
 		    			}
@@ -99,7 +102,7 @@ public class KVServer implements KeyValueInterface {
 			} finally{
 				lock.unlock();
 			}
-    		
+    		// if key-value does not exists in the cache and store, just return null.
         return value;
     }
 
@@ -120,6 +123,7 @@ public class KVServer implements KeyValueInterface {
     		Lock lock = dataCache.getLock(key);
     		try {    		
 	    			lock.lock();
+	    			//write through: modify the states of both cache and store
 	    			dataCache.del(key);	
 	        		dataStore.del(key);
 			} finally{

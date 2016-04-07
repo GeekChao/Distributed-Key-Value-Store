@@ -34,8 +34,8 @@ public class ThreadPool {
      */
     public synchronized void addJob(Runnable r){
         // implement me
-    		jobQueue.addLast(r);
-    		this.notify();
+    		jobQueue.addLast(r);// Assume the size of queue are large enough to store all requests
+    		this.notify();// wake up a thread in the block queue
     }
 
     /**
@@ -74,7 +74,7 @@ public class ThreadPool {
         @Override
         public void run() {
             // implement me
-        		while(true){
+        		while(true){ //run in the background until the server stops
         			try {
 						threadPool.getJob().run();
 					} catch (InterruptedException e) {
