@@ -23,6 +23,15 @@ public class TPCSlaveInfo {
      */
     public TPCSlaveInfo(String info) throws KVException {
         // implement me
+    		if(info == null || !info.contains("@") || !info.contains(":"))
+    			throw new KVException(ERROR_INVALID_FORMAT);
+    			
+    		int index1 = info.indexOf("@");
+    		int index2 = info.indexOf(":");
+    		
+    		slaveID = new Integer(info.substring(0, index1)).longValue();
+    		hostname = info.substring(index1 + 1, index2);
+    		port = new Integer(info.substring(index2 + 1)).intValue();
     }
 
     public long getSlaveID() {
@@ -46,7 +55,20 @@ public class TPCSlaveInfo {
      */
     public Socket connectHost(int timeout) throws KVException {
         // implement me
-        return null;
+    		Socket sock = null;
+    		
+    		try {
+				sock = new Socket(hostname, port);
+				sock.setSoTimeout(timeout);
+			} catch(SocketTimeoutException e){
+				throw new KVException(ERROR_SOCKET_TIMEOUT);
+			}catch (UnknownHostException e) {
+				throw new KVException(ERROR_COULD_NOT_CREATE_SOCKET);
+			} catch (IOException e) {
+				throw new KVException(ERROR_COULD_NOT_CONNECT);
+			} 
+    		
+        return sock;
     }
 
     /**
@@ -57,5 +79,9 @@ public class TPCSlaveInfo {
      */
     public void closeHost(Socket sock) {
         // implement me
+    		try {
+				sock.close();
+			} catch (IOException e) {
+			}
     }
 }

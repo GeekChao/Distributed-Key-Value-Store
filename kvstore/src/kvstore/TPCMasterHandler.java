@@ -2,7 +2,9 @@ package kvstore;
 
 import static kvstore.KVConstants.*;
 
+import java.io.IOException;
 import java.net.Socket;
+import java.net.UnknownHostException;
 /**
  * Implements NetworkHandler to handle 2PC operation requests from the Master/
  * Coordinator Server
@@ -58,6 +60,31 @@ public class TPCMasterHandler implements NetworkHandler {
     public void registerWithMaster(String masterHostname, SocketServer server)
             throws KVException {
         // implement me
+    		String slaveInfo = slaveID + "@" + server.getHostname() + ":" + server.getPort();
+    		KVMessage msg = new KVMessage(slaveInfo);
+    		Socket sock = null;
+    		
+    		try {
+    			//send slave information to master
+				sock = new Socket(masterHostname, 9090);
+				msg.sendMessage(sock);
+			//receive response from the master
+				KVMessage response = new KVMessage(sock);
+				if(!response.getMsgType().equals(RESP) || !response.getMessage().equals("Successfully registered " + slaveInfo))
+					throw new KVException(ERROR_INVALID_FORMAT);
+				
+			} catch (UnknownHostException e) {
+				throw new KVException(ERROR_COULD_NOT_CREATE_SOCKET);
+			} catch (IOException e) {
+				throw new KVException(ERROR_COULD_NOT_CONNECT);
+			}
+    		
+			try {
+	    			if(null != sock)
+					sock.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
     }
 
     /**
@@ -69,5 +96,43 @@ public class TPCMasterHandler implements NetworkHandler {
     @Override
     public void handle(Socket master) {
         // implement me
+    		threadpool.addJob(new MasterHandler(master));
+    }
+    
+    private class MasterHandler implements Runnable{
+
+    		private Socket master;
+    		
+    		public MasterHandler(Socket master){
+    			this.master = master;
+    		}
+    		
+		@Override
+		public void run() {
+    			KVMessage response = null;			
+    			KVMessage msg;
+    			
+    			try {
+					msg = new KVMessage(master);
+					switch (msg.getMsgType()) {
+					case GET_REQ:
+		                response = new KVMessage(RESP);
+		                response.setValue(kvServer.get(msg.getKey()));
+		                response.setKey(msg.getKey());
+						break;
+
+					default:
+						break;
+					}
+				} catch (KVException kve) {
+					response = kve.getKVMessage();
+				}
+    			
+    			try {
+					response.sendMessage(master);
+				} catch (KVException e) {
+				}
+		}
+    	
     }
 }

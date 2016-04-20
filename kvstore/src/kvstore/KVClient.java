@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import com.apple.eawt.event.MagnificationEvent;
+//import com.apple.eawt.event.MagnificationEvent;
 
 /**
  * Client API used to issue requests to key-value server.

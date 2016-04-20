@@ -44,7 +44,44 @@ public class TPCRegistrationHandler implements NetworkHandler {
     @Override
     public void handle(Socket slave) {
         // implement me
+    		threadpool.addJob(new RegistrationHandler(slave));
     }
     
     // implement me
+    private class RegistrationHandler implements Runnable{
+    	
+    		private Socket slave;
+    	
+    		public RegistrationHandler(Socket slave){
+    			this.slave = slave;
+    		}
+    		
+		@Override
+		public void run() {
+			KVMessage response;
+			KVMessage msg;
+			
+			try {
+				msg = new KVMessage(slave);
+				
+				if(msg.getMsgType().equals(REGISTER)){
+					master.registerSlave(new TPCSlaveInfo(msg.getMessage()));
+					response = new KVMessage(RESP, "Successfully registered " + msg.getMessage());
+				}else{
+					response = new KVMessage(ERROR_INVALID_FORMAT);
+				}
+				
+			} catch (KVException e) {
+				response = new KVMessage(ERROR_COULD_NOT_RECEIVE_DATA);
+			}
+			
+			try {
+				response.sendMessage(slave);
+			} catch (KVException e) {
+				e.printStackTrace();
+			}
+
+		}
+    	
+    }
 }

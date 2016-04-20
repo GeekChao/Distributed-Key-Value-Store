@@ -4,13 +4,23 @@ import static kvstore.KVConstants.*;
 
 import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+//import org.mockito.internal.stubbing.answers.ThrowsException;
+
+//import com.sun.xml.internal.bind.v2.runtime.reflect.opt.Const;
 
 public class TPCMaster {
 
     public int numSlaves;
     public KVCache masterCache;
-
+    private HashMap<Long, TPCSlaveInfo> slaveMap;
+    private Lock mLock;
+    private Condition sync;
+    private int MINVALUE = -1;
+    
     public static final int TIMEOUT = 3000;
 
     /**
@@ -23,6 +33,9 @@ public class TPCMaster {
         this.numSlaves = numSlaves;
         this.masterCache = cache;
         // implement me
+        slaveMap = new HashMap<Long, TPCSlaveInfo>();
+        mLock = new ReentrantLock();
+        sync = mLock.newCondition(); 
     }
 
     /**
@@ -34,6 +47,19 @@ public class TPCMaster {
      */
     public void registerSlave(TPCSlaveInfo slave) {
         // implement me
+    		mLock.lock();
+    		if(getNumRegisteredSlaves() < numSlaves){
+    			long slaveID = slave.getSlaveID();
+    			if(slaveMap.containsKey(slaveID)){
+    				slaveMap.replace(slaveID, slave);
+    			}else{
+    				slaveMap.put(slaveID, slave);
+    			}
+    			//work as a barrier for sync
+    			if(getNumRegisteredSlaves() == numSlaves)
+    				sync.signalAll();
+    		}
+    		mLock.unlock();
     }
 
     /**
@@ -83,8 +109,22 @@ public class TPCMaster {
      * @return SlaveInfo of first replica
      */
     public TPCSlaveInfo findFirstReplica(String key) {
-        // implement me
-        return null;
+    		long slaveId = hashTo64bit(key);
+    		long repId = MINVALUE;
+    		long minId = MINVALUE;
+    		
+    		for(long id : slaveMap.keySet()){
+    			if(isLessThanEqualUnsigned(slaveId, id) && isLessThanUnsigned(id, repId))
+    				repId = id;
+    			
+    			if(isLessThanUnsigned(id, minId))
+    				minId = id;
+    		}
+    		
+    		if(repId == MINVALUE && !slaveMap.containsKey(MINVALUE))
+    			repId = minId;
+    		
+        return slaveMap.get(repId);
     }
 
     /**
@@ -94,8 +134,22 @@ public class TPCMaster {
      * @return SlaveInfo of successor replica
      */
     public TPCSlaveInfo findSuccessor(TPCSlaveInfo firstReplica) {
-        // implement me
-        return null;
+        long slaveId = firstReplica.slaveID;
+		long repId = MINVALUE;
+		long minId = MINVALUE;
+		
+		for(long id : slaveMap.keySet()){
+			if(isLessThanUnsigned(slaveId, id) && isLessThanUnsigned(id, repId))
+				repId = id;
+			
+			if(isLessThanUnsigned(id, minId))
+				minId = id;
+		}
+		
+		if(repId == MINVALUE && slaveId == MINVALUE)
+			repId = minId;
+		
+		return slaveMap.get(repId);    
     }
 
     /**
@@ -103,7 +157,7 @@ public class TPCMaster {
      */
     public int getNumRegisteredSlaves() {
         // implement me
-        return -1;
+        return slaveMap.size();
     }
 
     /**
@@ -112,7 +166,7 @@ public class TPCMaster {
      */
     public TPCSlaveInfo getSlave(long slaveId) {
         // implement me
-        return null;
+        return slaveMap.get(slaveId);
     }
 
     /**
@@ -146,8 +200,78 @@ public class TPCMaster {
      *         the value from either slave for any reason
      */
     public String handleGet(KVMessage msg) throws KVException {
-        // implement me
-        return null;
+        // implement
+		try {
+		  mLock.lock();
+		  //process get requesets until all the slave servers are online.
+    		  if(getNumRegisteredSlaves() < numSlaves)
+			sync.await();
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		} finally{
+			mLock.unlock();
+		}
+    		
+    		String key = msg.getKey();
+    	    Lock lock = masterCache.getLock(key);
+    		String value = null;
+    		TPCSlaveInfo slaveInfo = null;
+    		
+    		//try to get from cache in the master server.
+    		try {
+			  lock.lock();
+			  
+			  value = masterCache.get(key);
+			  
+			  if(value == null){
+	    			//try to get from the primary slave server.
+	    			slaveInfo = findFirstReplica(key);
+	    			value = getFromSlave(msg, slaveInfo);
+			  }
+			  
+  			 if(value == null){
+  	  			//if it fails, try to get from the secondary slave server.
+  				slaveInfo = findSuccessor(slaveInfo);
+  				value = getFromSlave(msg, slaveInfo);
+  			 }
+  			 
+  			 if(value != null)
+  				 masterCache.put(key, value);
+  			
+			} catch (Exception e) {
+			} finally{
+				lock.unlock();
+			}
+    		
+    		//all fail
+    		if(value == null)
+    			throw new KVException(ERROR_NO_SUCH_KEY);
+    		
+        return value;
+    }
+    
+    private String getFromSlave(KVMessage msg, TPCSlaveInfo slaveInfo){
+    		Socket sock = null;
+    		KVMessage response = null;
+    		String value = null;
+    		
+    		try {
+    				//transfer get requst from clients to slave server
+				sock = slaveInfo.connectHost(TIMEOUT);
+				msg.sendMessage(sock);
+				
+				//get responese from slaves
+				response = new KVMessage(sock, TIMEOUT);
+				value = response.getValue();
+				
+			} catch (KVException e) {
+				e.printStackTrace();
+			} finally{
+				if(sock != null)
+					slaveInfo.closeHost(sock);
+			}
+    		
+    		return value;
     }
 
 }
