@@ -65,7 +65,7 @@ public class TPCMasterHandler implements NetworkHandler {
             throws KVException {
         // implement me
     		String slaveInfo = slaveID + "@" + server.getHostname() + ":" + server.getPort();
-    		KVMessage msg = new KVMessage(slaveInfo);
+    		KVMessage msg = new KVMessage(REGISTER, slaveInfo);
     		Socket sock = null;
     		
     		try {
@@ -114,7 +114,7 @@ public class TPCMasterHandler implements NetworkHandler {
 		@Override
 		public void run() {
     			KVMessage response = null;			
-    			KVMessage msg;
+    			KVMessage msg = null;
     			
     			try {
     					msg = new KVMessage(master);
@@ -165,23 +165,24 @@ public class TPCMasterHandler implements NetworkHandler {
 						response = new KVMessage(ACK);
 						KVMessage last = tpcLog.getLastEntry();
 						if(last.getMsgType().equals(PUT_REQ)){
-							kvServer.put(msg.getKey(), msg.getValue());
+							kvServer.put(last.getKey(), last.getValue());
 						}else if(last.getMsgType().equals(DEL_REQ)){
-							kvServer.del(msg.getKey());
+							kvServer.del(last.getKey());
 						}
 						break;
 					case ABORT:
 						response = new KVMessage(ACK);
 						break;
 					default:
-						tpcLog.appendAndFlush(msg);
 						break;
 					}					
 					
 				} catch (KVException kve) {
 					response = kve.getKVMessage();
 				}
-    			
+    			    	
+    			tpcLog.appendAndFlush(msg);
+
     			try {
 					response.sendMessage(master);
 				} catch (KVException e) {
