@@ -90,42 +90,6 @@ public class TPCMasterHandler implements NetworkHandler {
 				e.printStackTrace();
 			}
     }
-
-    private Boolean checkKeyValue(KVMessage msg, KVMessage response){
-    		String key = msg.getKey();
-		String value = msg.getValue();
-		String type;
-		Boolean vaild = true;
-		
-		if(msg.getMsgType().equals(GET_REQ)){
-			type = RESP;
-		}else{
-			type = ABORT;
-		}
-		
-		if(key == null){
-			response = new KVMessage(type, ERROR_INVALID_KEY);
-			vaild = false;
-		}else if(key.length() > MAX_KEY_SIZE){
-			response = new KVMessage(type, ERROR_OVERSIZED_KEY);
-			vaild = false;
-		}else if(!kvServer.hasKey(key)){
-			response = new KVMessage(type, ERROR_NO_SUCH_KEY);
-			vaild = false;
-		}
-		
-		if(msg.getMsgType().equals(PUT_REQ)){
-			if(value == null){
-				response = new KVMessage(type, ERROR_INVALID_VALUE);
-				vaild = false;
-			}else if(value.length() > MAX_VAL_SIZE){
-				response = new KVMessage(type , ERROR_OVERSIZED_VALUE);
-				vaild = false;
-			}
-		}
-		
-		return vaild;
-    }
     
     /**
      * Creates a job to service the request on a socket and enqueues that job
@@ -154,22 +118,48 @@ public class TPCMasterHandler implements NetworkHandler {
     			
     			try {
     					msg = new KVMessage(master);
+    			   		String key = msg.getKey();
+    					String value = msg.getValue();
     					
 					switch (msg.getMsgType()) {
 					case GET_REQ:
-						if(checkKeyValue(msg, response)){
+						if(key == null){
+							response = new KVMessage(RESP, ERROR_INVALID_KEY);
+						}else if(key.length() > MAX_KEY_SIZE){
+							response = new KVMessage(RESP, ERROR_OVERSIZED_KEY);
+						}else if(!kvServer.hasKey(key)){
+							response = new KVMessage(RESP, ERROR_NO_SUCH_KEY);
+						}else{
 			                response = new KVMessage(RESP);
 			                response.setValue(kvServer.get(msg.getKey()));
 			                response.setKey(msg.getKey());
 						}
 						break;
 					case PUT_REQ:
-						if(checkKeyValue(msg, response))
+						if(key == null){
+							response = new KVMessage(ABORT, ERROR_INVALID_KEY);
+						}else if(key.length() > MAX_KEY_SIZE){
+							response = new KVMessage(ABORT, ERROR_OVERSIZED_KEY);
+						}else if(!kvServer.hasKey(key)){
+							response = new KVMessage(ABORT, ERROR_NO_SUCH_KEY);
+						}else if (value == null) {
+							response = new KVMessage(ABORT , ERROR_INVALID_VALUE);
+						}else if (value.length() > MAX_VAL_SIZE) {
+							response = new KVMessage(ABORT, ERROR_OVERSIZED_VALUE);
+						}else{
 							response = new KVMessage(READY);
+						}
 						break;
 					case DEL_REQ:
-						if(checkKeyValue(msg, response))
+						if(key == null){
+							response = new KVMessage(ABORT, ERROR_INVALID_KEY);
+						}else if(key.length() > MAX_KEY_SIZE){
+							response = new KVMessage(ABORT, ERROR_OVERSIZED_KEY);
+						}else if(!kvServer.hasKey(key)){
+							response = new KVMessage(ABORT, ERROR_NO_SUCH_KEY);
+						}else{
 							response = new KVMessage(READY);
+						}
 						break;
 					case COMMIT:
 						response = new KVMessage(ACK);
