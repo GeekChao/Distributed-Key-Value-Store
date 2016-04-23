@@ -29,9 +29,9 @@ public class TPCSlaveInfo {
     		int index1 = info.indexOf("@");
     		int index2 = info.indexOf(":");
     		
-    		slaveID = new Integer(info.substring(0, index1)).longValue();
+    		slaveID = Long.parseLong(info.substring(0, index1));
     		hostname = info.substring(index1 + 1, index2);
-    		port = new Integer(info.substring(index2 + 1)).intValue();
+    		port = Integer.parseInt(info.substring(index2 + 1));
     }
 
     public long getSlaveID() {

@@ -170,6 +170,21 @@ public class TPCMaster {
     }
 
     /**
+     * wait until all slaves register before servicing any requests.
+     */
+    	private void Barrier(){
+    		try {
+    			  mLock.lock();
+    	    		  if(getNumRegisteredSlaves() < numSlaves)
+    				sync.await();
+    			} catch (InterruptedException e1) {
+    				e1.printStackTrace();
+    			} finally{
+    				mLock.unlock();
+    			}
+    	}
+    	
+    /**
      * Perform 2PC operations from the master node perspective. This method
      * contains the bulk of the two-phase commit logic. It performs phase 1
      * and phase 2 with appropriate timeouts and retries.
@@ -183,7 +198,83 @@ public class TPCMaster {
     public synchronized void handleTPCRequest(KVMessage msg, boolean isPutReq)
             throws KVException {
         // implement me
-    }
+    		Barrier();
+    		
+    		String key = msg.getKey();
+    		TPCSlaveInfo[] slave = new TPCSlaveInfo[2];
+    		slave[0] = findFirstReplica(key);
+    		slave[1] = findSuccessor(slave[0]);
+    		Socket sock = null;
+    		KVMessage[] response = new KVMessage[2];
+    		
+    		//phase 1
+    		for(int i = 0; i < 2; i++){
+			try {
+				//connect two slaves
+				sock = slave[i].connectHost(TIMEOUT);
+				//send client requests to two slaves
+				msg.sendMessage(sock);
+				//get responses from slaves
+				response[i] = new KVMessage(sock, TIMEOUT);
+			} catch(KVException kve){
+				//assume the slave voted abort beyond a single timeout period
+				if(kve.getKVMessage().getMessage().equals(ERROR_SOCKET_TIMEOUT)){
+					response[i] = new KVMessage(ABORT);
+				}else{
+					response[i] = kve.getKVMessage();
+				}
+			}finally{
+				if(sock != null)
+					slave[i].closeHost(sock);
+			}
+    		}
+    		
+    		//phase2
+		KVMessage decision = null;	    		
+		//master makes a decision according to the responses from slaves
+    		if(response[0].getMsgType().equals(READY) && response[1].getMsgType().equals(READY)){ // two slaves are all ready
+    			decision = new KVMessage(COMMIT);
+    		}else{	    
+    			decision = new KVMessage(ABORT);
+    		}  
+    		
+    		for(int i = 0; i < 2; i++){
+    		//during the phase 2, the master must retry with timeout until it receives a ack to its decision from slave.
+    			while(true){
+        			try {
+        				//connect two slaves
+        				sock = slave[i].connectHost(TIMEOUT);
+        				//send decision to two slaves
+            			decision.sendMessage(sock);
+            			//get response from two slaves
+        				response[i] = new KVMessage(sock, TIMEOUT);
+        			} catch(KVException kve){
+        				continue;
+        			}finally{
+        				if(sock != null)
+        					slave[i].closeHost(sock);
+        			}
+
+        			if(!response[i].getMsgType().equals(ACK)){
+		    			throw new KVException(ERROR_INVALID_FORMAT);		    			
+        			}else{
+        				break;
+        			}
+    			}
+        	}
+
+		//update the cache in the master
+		if(decision.getMsgType().equals(COMMIT)){
+			Lock lock = masterCache.getLock(key);
+			lock.lock();
+			if(isPutReq){
+				masterCache.put(key, msg.getValue());
+			}else{
+				masterCache.del(key);
+			}
+			lock.unlock();
+		}
+	}
 
     /**
      * Perform GET operation in the following manner:
@@ -201,16 +292,7 @@ public class TPCMaster {
      */
     public String handleGet(KVMessage msg) throws KVException {
         // implement
-		try {
-		  mLock.lock();
-		  //process get requesets until all the slave servers are online.
-    		  if(getNumRegisteredSlaves() < numSlaves)
-			sync.await();
-		} catch (InterruptedException e1) {
-			e1.printStackTrace();
-		} finally{
-			mLock.unlock();
-		}
+    		Barrier();
     		
     		String key = msg.getKey();
     	    Lock lock = masterCache.getLock(key);

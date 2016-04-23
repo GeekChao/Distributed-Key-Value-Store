@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import static kvstore.KVConstants.*;
 
 public class TPCLog {
 
@@ -107,8 +108,26 @@ public class TPCLog {
      */
     public void rebuildServer() throws KVException {
         loadFromDisk();
-
         // implement me
+        KVMessage msg = null;
+        for(int i = entries.size() - 1; i >= 0;){
+        		msg = entries.get(i);
+        		if(msg.getMsgType().equals(COMMIT)){
+        			msg = entries.get(i - 1);
+				if(msg.getMsgType().equals(PUT_REQ)){
+					kvServer.put(msg.getKey(), msg.getValue());
+				}else if(msg.getMsgType().equals(DEL_REQ)){
+					kvServer.del(msg.getKey());
+				}
+				i -= 2;
+        		}else if(msg.getMsgType().equals(GET_REQ)){
+        			i -= 1;
+        			continue;
+        		}else if(msg.getMsgType().equals(ABORT)){
+        			i -= 2;
+        			continue;
+        		}
+        }
     }
 
 }

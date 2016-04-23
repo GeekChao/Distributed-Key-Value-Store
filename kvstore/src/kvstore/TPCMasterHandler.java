@@ -5,6 +5,8 @@ import static kvstore.KVConstants.*;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+
+import kvstore.xml.KVMessageType;
 /**
  * Implements NetworkHandler to handle 2PC operation requests from the Master/
  * Coordinator Server
@@ -17,7 +19,9 @@ public class TPCMasterHandler implements NetworkHandler {
     public ThreadPool threadpool;
 
     // implement me
-
+    private static final int MAX_KEY_SIZE = 256;
+    private static final int MAX_VAL_SIZE = 256 * 1024;
+    
     /**
      * Constructs a TPCMasterHandler with one connection in its ThreadPool
      *
@@ -87,6 +91,42 @@ public class TPCMasterHandler implements NetworkHandler {
 			}
     }
 
+    private Boolean checkKeyValue(KVMessage msg, KVMessage response){
+    		String key = msg.getKey();
+		String value = msg.getValue();
+		String type;
+		Boolean vaild = true;
+		
+		if(msg.getMsgType().equals(GET_REQ)){
+			type = RESP;
+		}else{
+			type = ABORT;
+		}
+		
+		if(key == null){
+			response = new KVMessage(type, ERROR_INVALID_KEY);
+			vaild = false;
+		}else if(key.length() > MAX_KEY_SIZE){
+			response = new KVMessage(type, ERROR_OVERSIZED_KEY);
+			vaild = false;
+		}else if(!kvServer.hasKey(key)){
+			response = new KVMessage(type, ERROR_NO_SUCH_KEY);
+			vaild = false;
+		}
+		
+		if(msg.getMsgType().equals(PUT_REQ)){
+			if(value == null){
+				response = new KVMessage(type, ERROR_INVALID_VALUE);
+				vaild = false;
+			}else if(value.length() > MAX_VAL_SIZE){
+				response = new KVMessage(type , ERROR_OVERSIZED_VALUE);
+				vaild = false;
+			}
+		}
+		
+		return vaild;
+    }
+    
     /**
      * Creates a job to service the request on a socket and enqueues that job
      * in the thread pool. Ignore any InterruptedExceptions.
@@ -113,17 +153,41 @@ public class TPCMasterHandler implements NetworkHandler {
     			KVMessage msg;
     			
     			try {
-					msg = new KVMessage(master);
+    					msg = new KVMessage(master);
+    					
 					switch (msg.getMsgType()) {
 					case GET_REQ:
-		                response = new KVMessage(RESP);
-		                response.setValue(kvServer.get(msg.getKey()));
-		                response.setKey(msg.getKey());
+						if(checkKeyValue(msg, response)){
+			                response = new KVMessage(RESP);
+			                response.setValue(kvServer.get(msg.getKey()));
+			                response.setKey(msg.getKey());
+						}
 						break;
-
+					case PUT_REQ:
+						if(checkKeyValue(msg, response))
+							response = new KVMessage(READY);
+						break;
+					case DEL_REQ:
+						if(checkKeyValue(msg, response))
+							response = new KVMessage(READY);
+						break;
+					case COMMIT:
+						response = new KVMessage(ACK);
+						KVMessage last = tpcLog.getLastEntry();
+						if(last.getMsgType().equals(PUT_REQ)){
+							kvServer.put(msg.getKey(), msg.getValue());
+						}else if(last.getMsgType().equals(DEL_REQ)){
+							kvServer.del(msg.getKey());
+						}
+						break;
+					case ABORT:
+						response = new KVMessage(ACK);
+						break;
 					default:
+						tpcLog.appendAndFlush(msg);
 						break;
-					}
+					}					
+					
 				} catch (KVException kve) {
 					response = kve.getKVMessage();
 				}

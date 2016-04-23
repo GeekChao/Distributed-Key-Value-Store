@@ -12,6 +12,7 @@ public class KVConstants {
     public static final String FALSE = "False";
 
     // proj4-specific constants
+    public static final String CONNECT  = "connect";
     public static final String READY    = "ready";
     public static final String REGISTER = "register";
     public static final String ABORT    = "abort";
