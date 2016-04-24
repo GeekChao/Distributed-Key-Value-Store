@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import kvstore.xml.KVMessageType;
 /**
  * Implements NetworkHandler to handle 2PC operation requests from the Master/
  * Coordinator Server
@@ -118,48 +117,16 @@ public class TPCMasterHandler implements NetworkHandler {
     			
     			try {
     					msg = new KVMessage(master);
-    			   		String key = msg.getKey();
-    					String value = msg.getValue();
     					
 					switch (msg.getMsgType()) {
 					case GET_REQ:
-						if(key == null){
-							response = new KVMessage(RESP, ERROR_INVALID_KEY);
-						}else if(key.length() > MAX_KEY_SIZE){
-							response = new KVMessage(RESP, ERROR_OVERSIZED_KEY);
-						}else if(!kvServer.hasKey(key)){
-							response = new KVMessage(RESP, ERROR_NO_SUCH_KEY);
-						}else{
-			                response = new KVMessage(RESP);
-			                response.setValue(kvServer.get(msg.getKey()));
-			                response.setKey(msg.getKey());
-						}
+						response = handleGet(msg);
 						break;
 					case PUT_REQ:
-						if(key == null){
-							response = new KVMessage(ABORT, ERROR_INVALID_KEY);
-						}else if(key.length() > MAX_KEY_SIZE){
-							response = new KVMessage(ABORT, ERROR_OVERSIZED_KEY);
-						}else if(!kvServer.hasKey(key)){
-							response = new KVMessage(ABORT, ERROR_NO_SUCH_KEY);
-						}else if (value == null) {
-							response = new KVMessage(ABORT , ERROR_INVALID_VALUE);
-						}else if (value.length() > MAX_VAL_SIZE) {
-							response = new KVMessage(ABORT, ERROR_OVERSIZED_VALUE);
-						}else{
-							response = new KVMessage(READY);
-						}
+						response = handlePut(msg);
 						break;
 					case DEL_REQ:
-						if(key == null){
-							response = new KVMessage(ABORT, ERROR_INVALID_KEY);
-						}else if(key.length() > MAX_KEY_SIZE){
-							response = new KVMessage(ABORT, ERROR_OVERSIZED_KEY);
-						}else if(!kvServer.hasKey(key)){
-							response = new KVMessage(ABORT, ERROR_NO_SUCH_KEY);
-						}else{
-							response = new KVMessage(READY);
-						}
+						response = handleDel(msg);
 						break;
 					case COMMIT:
 						response = new KVMessage(ACK);
@@ -188,6 +155,64 @@ public class TPCMasterHandler implements NetworkHandler {
 				} catch (KVException e) {
 				}
 		}
+		
+		private KVMessage handleGet(KVMessage msg){
+	   		String key = msg.getKey();
+			String value = msg.getValue();
+			KVMessage response = null;
+			
+			if(key == null){
+				response = new KVMessage(RESP, ERROR_INVALID_KEY);
+			}else if(key.length() > MAX_KEY_SIZE){
+				response = new KVMessage(RESP, ERROR_OVERSIZED_KEY);
+			}else if(!kvServer.hasKey(key)){
+				response = new KVMessage(RESP, ERROR_NO_SUCH_KEY);
+			}else{
+                response = new KVMessage(RESP);
+                response.setValue(key);
+                response.setKey(value);
+			}
+			
+			return response;
+		}
     	
+		private KVMessage handlePut(KVMessage msg){
+	   		String key = msg.getKey();
+			String value = msg.getValue();
+			KVMessage response = null;
+			
+			if(key == null){
+				response = new KVMessage(ABORT, ERROR_INVALID_KEY);
+			}else if(key.length() > MAX_KEY_SIZE){
+				response = new KVMessage(ABORT, ERROR_OVERSIZED_KEY);
+			}else if(!kvServer.hasKey(key)){
+				response = new KVMessage(ABORT, ERROR_NO_SUCH_KEY);
+			}else if (value == null) {
+				response = new KVMessage(ABORT , ERROR_INVALID_VALUE);
+			}else if (value.length() > MAX_VAL_SIZE) {
+				response = new KVMessage(ABORT, ERROR_OVERSIZED_VALUE);
+			}else{
+				response = new KVMessage(READY);
+			}
+			
+			return response;
+		}
+		
+		private KVMessage handleDel(KVMessage msg){
+	   		String key = msg.getKey();
+			KVMessage response = null;
+			
+			if(key == null){
+				response = new KVMessage(ABORT, ERROR_INVALID_KEY);
+			}else if(key.length() > MAX_KEY_SIZE){
+				response = new KVMessage(ABORT, ERROR_OVERSIZED_KEY);
+			}else if(!kvServer.hasKey(key)){
+				response = new KVMessage(ABORT, ERROR_NO_SUCH_KEY);
+			}else{
+				response = new KVMessage(READY);
+			}
+			
+			return response;
+		}
     }
 }

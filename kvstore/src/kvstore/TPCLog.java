@@ -122,10 +122,8 @@ public class TPCLog {
 				i -= 2;
         		}else if(msg.getMsgType().equals(GET_REQ)){
         			i -= 1;
-        			continue;
         		}else if(msg.getMsgType().equals(ABORT)){
         			i -= 2;
-        			continue;
         		}
         }
     }

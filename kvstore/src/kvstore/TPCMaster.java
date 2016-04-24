@@ -48,17 +48,11 @@ public class TPCMaster {
     public void registerSlave(TPCSlaveInfo slave) {
         // implement me
     		mLock.lock();
-    		if(getNumRegisteredSlaves() < numSlaves){
-    			long slaveID = slave.getSlaveID();
-    			if(slaveMap.containsKey(slaveID)){
-    				slaveMap.replace(slaveID, slave);
-    			}else{
-    				slaveMap.put(slaveID, slave);
-    			}
-    			//work as a barrier for sync
-    			if(getNumRegisteredSlaves() == numSlaves)
-    				sync.signalAll();
-    		}
+    		if(getNumRegisteredSlaves() < numSlaves)
+    			slaveMap.put(slave.getSlaveID(), slave);
+		//work as a barrier for sync
+		if(getNumRegisteredSlaves() == numSlaves)
+			sync.signalAll();
     		mLock.unlock();
     }
 
@@ -201,13 +195,13 @@ public class TPCMaster {
     		Barrier();
     		
     		String key = msg.getKey();
-    		TPCSlaveInfo[] slave = new TPCSlaveInfo[2];
-    		slave[0] = findFirstReplica(key);
-    		slave[1] = findSuccessor(slave[0]);
     		Socket sock = null;
     		KVMessage[] response = new KVMessage[2];
-    		
+    		TPCSlaveInfo[] slave = new TPCSlaveInfo[2];
+
     		//phase 1
+    		slave[0] = findFirstReplica(key);
+    		slave[1] = findSuccessor(slave[0]);
     		for(int i = 0; i < 2; i++){
 			try {
 				//connect two slaves
@@ -242,6 +236,12 @@ public class TPCMaster {
     		//during the phase 2, the master must retry with timeout until it receives a ack to its decision from slave.
     			while(true){
         			try {
+        				//retry with the latest host-port the slave has registered with
+        				if(i == 0){
+        					slave[0] = findFirstReplica(key);
+        				}else if(i == 1){
+        					slave[1] = findSuccessor(slave[0]);
+        				}
         				//connect two slaves
         				sock = slave[i].connectHost(TIMEOUT);
         				//send decision to two slaves
