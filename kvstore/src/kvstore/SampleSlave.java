@@ -15,9 +15,6 @@ public class SampleSlave {
     static long slaveID;
     static String masterHostname;
 
-    static int masterPort = 8080;
-    static int registrationPort = 9090;
-
     public static void main(String[] args) throws IOException, KVException {
         if (args.length != 1) {
             throw new IllegalArgumentException("Need master IP address");
@@ -35,7 +32,7 @@ public class SampleSlave {
         server = new SocketServer(InetAddress.getLocalHost().getHostAddress());
 
         keyServer = new KVServer(100, 10);
-        logPath = "bin/log." + slaveID + "@" + server.getHostname();
+        logPath = "./log." + slaveID + "@" + server.getHostname();
         log = new TPCLog(logPath, keyServer);
 
         TPCMasterHandler handler = new TPCMasterHandler(slaveID, keyServer, log);

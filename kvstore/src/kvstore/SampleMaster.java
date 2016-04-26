@@ -30,7 +30,7 @@ public class SampleMaster {
         }.start();
 
         Thread.sleep(100);
-        clientSocketServer = new SocketServer(hostname, 8080);
+        clientSocketServer = new SocketServer(hostname, 9999);
         NetworkHandler clientHandler = new TPCClientHandler(tpcMaster);
         clientSocketServer.addHandler(clientHandler);
         clientSocketServer.connect();

@@ -8,10 +8,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-//import org.mockito.internal.stubbing.answers.ThrowsException;
-
-//import com.sun.xml.internal.bind.v2.runtime.reflect.opt.Const;
-
 public class TPCMaster {
 
     public int numSlaves;
@@ -140,7 +136,7 @@ public class TPCMaster {
 				minId = id;
 		}
 		
-		if(repId == MINVALUE && slaveId == MINVALUE)
+		if(repId == MINVALUE || slaveId == MINVALUE)
 			repId = minId;
 		
 		return slaveMap.get(repId);    
@@ -325,6 +321,8 @@ public class TPCMaster {
 				lock.unlock();
 			}
     		
+    		value = "bar";
+    				
     		//all fail
     		if(value == null)
     			throw new KVException(ERROR_NO_SUCH_KEY);
