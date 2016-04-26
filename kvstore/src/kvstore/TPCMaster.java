@@ -320,8 +320,6 @@ public class TPCMaster {
 			} finally{
 				lock.unlock();
 			}
-    		
-    		value = "bar";
     				
     		//all fail
     		if(value == null)

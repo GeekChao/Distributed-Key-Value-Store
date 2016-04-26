@@ -185,8 +185,6 @@ public class TPCMasterHandler implements NetworkHandler {
 				response = new KVMessage(ABORT, ERROR_INVALID_KEY);
 			}else if(key.length() > MAX_KEY_SIZE){
 				response = new KVMessage(ABORT, ERROR_OVERSIZED_KEY);
-			}else if(!kvServer.hasKey(key)){
-				response = new KVMessage(ABORT, ERROR_NO_SUCH_KEY);
 			}else if (value == null) {
 				response = new KVMessage(ABORT , ERROR_INVALID_VALUE);
 			}else if (value.length() > MAX_VAL_SIZE) {
