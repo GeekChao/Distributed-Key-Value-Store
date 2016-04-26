@@ -8,4 +8,4 @@
     the TPCMaster library to forward client requests for PUT and DEL to multiple slave servers and follow 
     the TPC protocol for atomic PUT and DEL operations across multiple slave servers.
     
-![alt tag](https://github.com/GeekChao/Operating-System/blob/master/kvstore/resources/pictures/kvstore.png)
+![alt tag](https://github.com/GeekChao/Operating-System/blob/distributed/kvstore/resources/pictures/kvstore.png)
