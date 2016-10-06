@@ -11,7 +11,7 @@ public class SampleMaster {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         final String hostname = InetAddress.getLocalHost().getHostAddress();
-        tpcMaster = new TPCMaster(2, new KVCache(1, 4));
+        tpcMaster = new TPCMaster(4, new KVCache(4, 4));
 
         new Thread() {
             @Override
