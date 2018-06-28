@@ -1,6 +1,6 @@
 # Distributed Key-Value Store
 
-##Overview
+## Overview
         Multiple clients will be communicating with a single master server in a given messaging format 
     (KVMessage) using a client library (KVClient). The master contains a set-associative cache (KVCache),
     and it uses the cache to serve GET requests without going to the key-value (slave) servers it coordinates.
